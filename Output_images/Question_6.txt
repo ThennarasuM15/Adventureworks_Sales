@@ -1,0 +1,47 @@
+--6) Which products maintain stable demand despite unit price increases?
+
+WITH base AS (
+    SELECT
+        p.ProductKey,
+        p.Product,
+        s.Unit_Price,
+        COUNT(*) AS demand
+    FROM Adven_Product p
+    JOIN Adven_Sales s
+        ON p.ProductKey = s.ProductKey
+    GROUP BY
+        p.ProductKey,
+        p.Product,
+        s.Unit_Price
+),
+cmp AS (
+    SELECT *,
+        Unit_Price - LAG(Unit_Price)
+            OVER (PARTITION BY ProductKey ORDER BY Unit_Price) AS price_diff,
+        demand - LAG(demand)
+            OVER (PARTITION BY ProductKey ORDER BY Unit_Price) AS demand_diff
+    FROM base
+),
+valid_products AS (
+    SELECT ProductKey
+    FROM cmp
+    GROUP BY ProductKey
+    HAVING
+        SUM(
+            CASE
+                WHEN price_diff > 0 AND demand_diff < 0 THEN 1
+                ELSE 0
+            END
+        ) = 0
+)
+SELECT
+    c.ProductKey,
+    c.Product,
+    c.Unit_Price,
+    c.demand
+FROM cmp c
+JOIN valid_products v
+    ON c.ProductKey = v.ProductKey
+ORDER BY
+    c.ProductKey,
+    c.Unit_Price;
