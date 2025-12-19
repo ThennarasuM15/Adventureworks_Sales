@@ -1,0 +1,33 @@
+WITH base AS (
+    SELECT
+        p.category,
+        p.productkey,
+        SUM(s.sales_amount) AS rev,
+        DENSE_RANK() OVER (
+            PARTITION BY p.category
+            ORDER BY SUM(s.sales_amount) DESC
+        ) AS rnk
+    FROM adven_product p
+    JOIN adven_sales s
+        ON p.productkey = s.productkey
+    GROUP BY
+        p.category,
+        p.productkey
+),
+reven AS (
+    SELECT
+        category,
+        COUNT(DISTINCT productkey) AS produc,
+        SUM(rev) AS tot_rev,
+        SUM(
+            CASE
+                WHEN rnk IN (1, 2, 3) THEN rev
+                ELSE 0
+            END
+        ) AS top3
+    FROM base
+    GROUP BY category
+)
+SELECT *
+FROM reven
+WHERE top3 > 0.6 * tot_rev;
