@@ -1,1 +1,54 @@
+--4) Which territories have below-average revenue per customer despite high order volume?
 
+WITH base AS (
+    SELECT
+        s.SalesTerritoryKey,
+        t.Region,
+        t.Country,
+        t.[Group],
+        s.CustomerKey,
+        s.SalesOrderLineKey,
+        s.Sales_Amount
+    FROM Adven_Sales s
+    JOIN [Adven_Sales Terittory] t
+        ON s.SalesTerritoryKey = t.SalesTerritoryKey
+),
+
+territory_metrics AS (
+    SELECT
+        SalesTerritoryKey,
+        Region,
+        Country,
+        [Group],
+        SUM(Sales_Amount) AS territory_revenue,
+        COUNT(DISTINCT CustomerKey) AS territory_customers,
+        COUNT(SalesOrderLineKey) AS territory_order_volume,
+        SUM(Sales_Amount) * 1.0 / COUNT(DISTINCT CustomerKey) AS rev_per_customer
+    FROM base
+    GROUP BY
+        SalesTerritoryKey,
+        Region,
+        Country,
+        [Group]
+),
+
+global_benchmarks AS (
+    SELECT
+        SUM(Sales_Amount) * 1.0 / COUNT(DISTINCT CustomerKey) AS global_avg_rev_per_customer,
+        COUNT(SalesOrderLineKey) * 1.0 / COUNT(DISTINCT SalesTerritoryKey) AS global_avg_order_volume
+    FROM base
+)
+
+SELECT
+    tm.SalesTerritoryKey,
+    tm.Region,
+    tm.Country,
+    tm.[Group],
+    tm.rev_per_customer,
+    tm.territory_order_volume
+FROM territory_metrics tm
+CROSS JOIN global_benchmarks gb
+WHERE
+    tm.rev_per_customer < gb.global_avg_rev_per_customer
+    AND tm.territory_order_volume > gb.global_avg_order_volume
+ORDER BY tm.territory_order_volume DESC;
