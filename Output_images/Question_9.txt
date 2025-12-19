@@ -1,0 +1,29 @@
+--9) Identify high-value customers who stopped purchasing in the last 90 days.
+
+WITH base AS (
+    SELECT
+        c.customerkey,
+        c.customer,
+        MAX(d.[date]) AS max_dt,
+        SUM(s.sales_amount) AS rev
+    FROM adven_sales s
+    JOIN Adven_Customer c
+        ON s.customerkey = c.customerkey
+    JOIN adven_date d
+        ON s.orderdatekey = d.datekey
+    GROUP BY
+        c.customerkey,
+        c.customer
+),
+
+customer_value AS (
+    SELECT
+        *,
+        NTILE(10) OVER (ORDER BY rev DESC) AS cust_val
+    FROM base
+)
+
+SELECT *
+FROM customer_value
+WHERE cust_val = 1
+  AND max_dt < '2021-04-01';
