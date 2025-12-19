@@ -1,0 +1,20 @@
+--3)  What % of total revenue comes from top 5% of customers?
+
+WITH cte AS (
+    SELECT
+        customerkey,
+        SUM(sales_amount) AS rev
+    FROM adven_sales
+    GROUP BY customerkey
+),
+sep AS (
+    SELECT
+        *,
+        NTILE(20) OVER (ORDER BY rev DESC) AS rnk
+    FROM cte
+)
+SELECT
+    100.0 * 
+    (SELECT SUM(rev) FROM sep WHERE rnk = 1)
+    /
+    (SELECT SUM(rev) FROM cte) AS top_5_percent_revenue_pct;
