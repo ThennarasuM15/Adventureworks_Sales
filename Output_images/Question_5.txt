@@ -1,0 +1,43 @@
+--5) Did online sales increase in regions where reseller sales declined?
+
+-- Without Time comparison 
+with c1 as (select t.Region,t.Country,s.ResellerKey,s.Sales_Amount from [Adven_Sales Terittory] t join Adven_Sales s on t.SalesTerritoryKey=s.SalesTerritoryKey),
+     c2 as (select region,country,resellerkey,sum(sales_amount) rev from c1 group by region,country,resellerkey)
+	 select region,country, sum(case when resellerkey='-1' then rev else 0 end) as Online_sales,
+	        sum(case when resellerkey !='-1' then rev else 0 end) as Reseller_sales from c2 group by region,country;
+
+
+select * from Adven_Date;
+
+--With Time Comparison
+
+WITH base AS (
+    SELECT
+        t.Region,
+        d.Fiscal_Year AS yr,
+        SUM(CASE WHEN s.ResellerKey = -1 THEN s.Sales_Amount ELSE 0 END) AS online_rev,
+        SUM(CASE WHEN s.ResellerKey <> -1 THEN s.Sales_Amount ELSE 0 END) AS reseller_rev
+    FROM Adven_Sales s
+    JOIN [Adven_Sales Terittory] t
+        ON s.SalesTerritoryKey = t.SalesTerritoryKey
+    JOIN Adven_Date d
+        ON s.OrderDateKey = d.DateKey
+    GROUP BY
+        t.Region,
+        d.Fiscal_Year
+),
+growth AS (
+    SELECT
+        Region,
+        yr,
+        online_rev,
+        reseller_rev,
+        online_rev - LAG(online_rev) OVER (PARTITION BY Region ORDER BY yr) AS online_change,
+        reseller_rev - LAG(reseller_rev) OVER (PARTITION BY Region ORDER BY yr) AS reseller_change
+    FROM base
+)
+SELECT *
+FROM growth
+WHERE
+    online_change > 0
+    AND reseller_change < 0;
