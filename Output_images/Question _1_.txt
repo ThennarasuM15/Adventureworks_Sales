@@ -1,0 +1,10 @@
+SELECT
+    o.sales_order_line,
+    s.extended_amount,
+    (s.order_quantity * s.unit_price) AS order_price,
+    (s.extended_amount - (s.order_quantity * s.unit_price)) AS leakage
+FROM adven_sales s
+JOIN adven_sales_order o
+    ON o.SalesOrderLineKey = s.SalesOrderLineKey
+WHERE (s.extended_amount - (s.order_quantity * s.unit_price)) <> 0;
+
