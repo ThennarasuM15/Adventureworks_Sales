@@ -1,0 +1,28 @@
+--10) Revenue per order vs revenue per customer by territory — which region is inefficient?
+
+WITH base AS (
+    SELECT
+        t.SalesTerritoryKey,
+        t.region,
+        t.country,
+        t.[group],
+        SUM(s.sales_amount) AS rev,
+        COUNT(*) AS tot_orders,
+        COUNT(DISTINCT s.customerkey) AS tot_cust
+    FROM [Adven_Sales Terittory] t
+    JOIN Adven_Sales s
+        ON t.SalesTerritoryKey = s.SalesTerritoryKey
+    GROUP BY
+        t.SalesTerritoryKey,
+        t.region,
+        t.country,
+        t.[group]
+)
+SELECT
+    SalesTerritoryKey,
+    region,
+    country,
+    [group],
+    rev * 1.0 / tot_orders AS rev_per_order,
+    rev * 1.0 / tot_cust AS rev_per_customer
+FROM base;
