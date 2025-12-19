@@ -1,0 +1,36 @@
+-- Identifying peak and off-peak seasons by category
+
+WITH base AS (
+    SELECT
+        p.category,
+        d.fiscal_quarter,
+        SUM(s.sales_amount) AS rev
+    FROM adven_sales s
+    JOIN adven_product p
+        ON s.ProductKey = p.ProductKey
+    JOIN adven_date d
+        ON s.OrderDateKey = d.DateKey
+    GROUP BY
+        p.category,
+        d.fiscal_quarter
+),
+
+quarters AS (
+    SELECT
+        category,
+        SUM(CASE WHEN fiscal_quarter LIKE '%Q1' THEN rev ELSE 0 END) AS Q1,
+        SUM(CASE WHEN fiscal_quarter LIKE '%Q2' THEN rev ELSE 0 END) AS Q2,
+        SUM(CASE WHEN fiscal_quarter LIKE '%Q3' THEN rev ELSE 0 END) AS Q3,
+        SUM(CASE WHEN fiscal_quarter LIKE '%Q4' THEN rev ELSE 0 END) AS Q4
+    FROM base
+    GROUP BY category
+)
+
+SELECT
+    category,
+    Q1,
+    DENSE_RANK() OVER (ORDER BY Q1 DESC) AS peak_rnk,
+    Q3,
+    DENSE_RANK() OVER (ORDER BY Q3 DESC) AS off_peak_rnk
+FROM quarters
+ORDER BY category;
