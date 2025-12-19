@@ -1,0 +1,42 @@
+WITH cte AS (
+    SELECT
+        s.ProductKey,
+        p.Product,
+        d.Fiscal_Quarter,
+        s.Extended_Amount
+    FROM adven_sales s
+    JOIN adven_product p 
+        ON s.ProductKey = p.ProductKey
+    JOIN adven_date d 
+        ON d.DateKey = s.OrderDateKey
+),
+QoQ AS (
+    SELECT
+        ProductKey,
+        Product,
+        Fiscal_Quarter,
+        SUM(Extended_Amount) AS Rev
+    FROM cte
+    GROUP BY ProductKey, Product, Fiscal_Quarter
+),
+QoQ_pct AS (
+    SELECT
+        *,
+        (Rev - LAG(Rev) OVER (
+            PARTITION BY ProductKey 
+            ORDER BY Fiscal_Quarter
+        )) * 100.0 
+        / LAG(Rev) OVER (
+            PARTITION BY ProductKey 
+            ORDER BY Fiscal_Quarter
+        ) AS QoQ_Growth_Pct
+    FROM QoQ
+)
+SELECT TOP 1
+    ProductKey,
+    Product,
+    SUM(Rev) AS Total_Revenue,
+    AVG(QoQ_Growth_Pct) AS Avg_QoQ_Growth
+FROM QoQ_pct
+GROUP BY ProductKey, Product
+ORDER BY Avg_QoQ_Growth DESC;
